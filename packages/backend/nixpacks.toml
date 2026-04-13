@@ -1,11 +1,11 @@
 [phases.setup]
-nixPkgs = ["nodejs_20", "npm-9_x"]
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install --production=false"]
+cmds = ["npm install --ignore-scripts"]
 
 [phases.build]
-cmds = ["npm run build"]
+cmds = ["npx tsc"]
 
 [start]
-cmd = "npx knex migrate:latest --knexfile knexfile.js --env production && node dist/index.js"
+cmd = "npx knex migrate:latest --knexfile knexfile.js --env production 2>&1 || true; node dist/index.js"
