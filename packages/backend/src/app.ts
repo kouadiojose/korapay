@@ -8,6 +8,18 @@ import { apiRateLimiter } from './middleware/rateLimiter';
 import { errorHandler } from './middleware/errorHandler';
 import { NotFoundError } from './utils/errors';
 
+import authRoutes from './modules/auth/auth.routes';
+import merchantRoutes from './modules/merchants/merchant.routes';
+import walletRoutes from './modules/wallets/wallet.routes';
+import paymentRoutes from './modules/payments/payment.routes';
+import transferRoutes from './modules/transfers/transfer.routes';
+import payoutRoutes from './modules/payouts/payout.routes';
+import webhookRoutes from './modules/webhooks/webhook.routes';
+import kycRoutes from './modules/kyc/kyc.routes';
+import settlementRoutes from './modules/settlements/settlement.routes';
+import checkoutRoutes from './modules/checkout/checkout.routes';
+import adminRoutes from './modules/admin/admin.routes';
+
 const app = express();
 
 // Security headers
@@ -52,31 +64,17 @@ app.get('/health', (_req, res) => {
 });
 
 // API routes
-// Routes are mounted here as modules are implemented.
-// Example:
-// import authRoutes from './modules/auth/auth.routes';
-// import merchantRoutes from './modules/merchants/merchant.routes';
-// import paymentRoutes from './modules/payments/payment.routes';
-// import payoutRoutes from './modules/payouts/payout.routes';
-// import transferRoutes from './modules/transfers/transfer.routes';
-// import walletRoutes from './modules/wallets/wallet.routes';
-// import webhookRoutes from './modules/webhooks/webhook.routes';
-// import kycRoutes from './modules/kyc/kyc.routes';
-// import adminRoutes from './modules/admin/admin.routes';
-// import checkoutRoutes from './modules/checkout/checkout.routes';
-// import settlementRoutes from './modules/settlements/settlement.routes';
-//
-// app.use('/api/v1/auth', authRoutes);
-// app.use('/api/v1/merchants', merchantRoutes);
-// app.use('/api/v1/payments', paymentRoutes);
-// app.use('/api/v1/payouts', payoutRoutes);
-// app.use('/api/v1/transfers', transferRoutes);
-// app.use('/api/v1/wallets', walletRoutes);
-// app.use('/api/v1/webhooks', webhookRoutes);
-// app.use('/api/v1/kyc', kycRoutes);
-// app.use('/api/v1/admin', adminRoutes);
-// app.use('/api/v1/checkout', checkoutRoutes);
-// app.use('/api/v1/settlements', settlementRoutes);
+app.use('/api/v1/auth', authRoutes);
+app.use('/api/v1/merchants', merchantRoutes);
+app.use('/api/v1/wallets', walletRoutes);
+app.use('/api/v1', paymentRoutes); // charges + transactions + callbacks
+app.use('/api/v1/transfers', transferRoutes);
+app.use('/api/v1/payouts', payoutRoutes);
+app.use('/api/v1/merchants/webhooks', webhookRoutes);
+app.use('/api/v1/kyc', kycRoutes);
+app.use('/api/v1/settlements', settlementRoutes);
+app.use('/api/v1', checkoutRoutes); // checkout routes
+app.use('/api/v1/admin', adminRoutes);
 
 // 404 handler for unmatched routes
 app.use((_req, _res, next) => {
