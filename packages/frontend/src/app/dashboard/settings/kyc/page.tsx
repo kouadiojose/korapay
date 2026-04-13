@@ -68,7 +68,7 @@ export default function KycPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
 
-  const overallStatus = 'under_review';
+  const overallStatus: string = 'under_review';
 
   useEffect(() => {
     const timer = setTimeout(() => {
