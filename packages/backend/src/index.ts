@@ -6,7 +6,7 @@ import { config } from './config';
 
 const PORT = config.app.port;
 
-const server = app.listen(PORT, () => {
+const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Korapay API server running on port ${PORT} [${config.app.env}]`);
   console.log(`Health check: ${config.app.url}/health`);
 });

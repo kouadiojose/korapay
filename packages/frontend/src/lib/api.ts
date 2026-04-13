@@ -2,8 +2,14 @@ import axios from 'axios';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
+// In browser, use relative /api paths (proxied by Next.js rewrites)
+// On server-side, use the full API URL
+const baseURL = typeof window !== 'undefined'
+  ? '/api/v1'
+  : `${API_URL}/api/v1`;
+
 const api = axios.create({
-  baseURL: `${API_URL}/api/v1`,
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },

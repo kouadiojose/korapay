@@ -29,11 +29,11 @@ app.use(helmet());
 app.use(
   cors({
     origin: config.app.isProduction
-      ? config.app.frontendUrl
+      ? [config.app.frontendUrl, /\.railway\.app$/]
       : '*',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Idempotency-Key'],
   })
 );
 
