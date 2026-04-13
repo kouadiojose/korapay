@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20", "npm-9_x"]
 
 [phases.install]
-cmds = ["npm install"]
+cmds = ["npm install --production=false"]
 
 [phases.build]
 cmds = ["npm run build"]
 
 [start]
-cmd = "npx knex migrate:latest --knexfile knexfile.ts && node dist/index.js"
+cmd = "npx knex migrate:latest --knexfile knexfile.js --env production && node dist/index.js"
