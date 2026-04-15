@@ -1,9 +1,16 @@
 import knex from 'knex';
 import { config } from './index';
 
+const connectionConfig = config.app.isProduction
+  ? {
+      connectionString: config.db.url,
+      ssl: { rejectUnauthorized: false },
+    }
+  : config.db.url;
+
 const db = knex({
   client: 'pg',
-  connection: config.db.url,
+  connection: connectionConfig,
   pool: {
     min: 0,
     max: config.app.isProduction ? 20 : 10,
