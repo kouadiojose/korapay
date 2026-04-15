@@ -14,6 +14,7 @@ export const initializePaymentSchema = z.object({
   return_url: z.string().url().max(500).optional(),
   metadata: z.record(z.unknown()).optional(),
   narration: z.string().max(500).trim().optional(),
+  idempotency_key: z.string().max(255).trim().optional(),
 });
 
 export const listTransactionsQuerySchema = z.object({

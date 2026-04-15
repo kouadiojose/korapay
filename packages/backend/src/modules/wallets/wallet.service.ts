@@ -1,5 +1,5 @@
 import db from '../../config/database';
-import { NotFoundError, InsufficientFundsError } from '../../utils/errors';
+import { NotFoundError, InsufficientFundsError, AppError } from '../../utils/errors';
 import { generateReference } from '../../utils/reference';
 import { paginate } from '../../utils/pagination';
 import { Knex } from 'knex';
@@ -91,13 +91,19 @@ export async function creditWallet(
   const balanceBefore = Number(wallet.balance);
   const balanceAfter = balanceBefore + amount;
 
-  await executor('wallets')
+  // Optimistic lock: ensure balance hasn't changed since read
+  const updated = await executor('wallets')
     .where('id', wallet.id)
+    .where('balance', wallet.balance) // optimistic lock
     .update({
       balance: balanceAfter,
       available_balance: Number(wallet.available_balance) + amount,
       updated_at: new Date(),
     });
+
+  if (updated === 0) {
+    throw new AppError('Wallet balance changed during update. Please retry.', 409, 'BALANCE_CONFLICT');
+  }
 
   const [walletTransaction] = await executor('wallet_transactions')
     .insert({
@@ -144,13 +150,19 @@ export async function debitWallet(
   const balanceBefore = Number(wallet.balance);
   const balanceAfter = balanceBefore - amount;
 
-  await executor('wallets')
+  // Optimistic lock: ensure balance hasn't changed since read
+  const updated = await executor('wallets')
     .where('id', wallet.id)
+    .where('balance', wallet.balance) // optimistic lock
     .update({
       balance: balanceAfter,
       available_balance: availableBalance - amount,
       updated_at: new Date(),
     });
+
+  if (updated === 0) {
+    throw new AppError('Wallet balance changed during update. Please retry.', 409, 'BALANCE_CONFLICT');
+  }
 
   const [walletTransaction] = await executor('wallet_transactions')
     .insert({

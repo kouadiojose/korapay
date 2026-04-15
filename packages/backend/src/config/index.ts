@@ -7,8 +7,8 @@ const envSchema = z.object({
   // App
   PORT: z.coerce.number().default(3000),
   NODE_ENV: z.enum(['development', 'staging', 'production', 'test']).default('development'),
-  APP_URL: z.string().url().default('http://localhost:3000'),
-  FRONTEND_URL: z.string().url().default('http://localhost:3001'),
+  APP_URL: z.string().default('http://localhost:3000'),
+  FRONTEND_URL: z.string().default('http://localhost:3001'),
 
   // Database
   DATABASE_URL: z.string().default('postgresql://korapay:password@localhost:5432/korapay_dev'),
@@ -16,14 +16,14 @@ const envSchema = z.object({
   // Redis
   REDIS_URL: z.string().default('redis://localhost:6379'),
 
-  // JWT
-  JWT_ACCESS_SECRET: z.string().default('dev-access-secret-change-in-production'),
-  JWT_REFRESH_SECRET: z.string().default('dev-refresh-secret-change-in-production'),
+  // JWT - no defaults in production (must be set explicitly)
+  JWT_ACCESS_SECRET: z.string().min(1),
+  JWT_REFRESH_SECRET: z.string().min(1),
   JWT_ACCESS_EXPIRY: z.string().default('15m'),
   JWT_REFRESH_EXPIRY: z.string().default('7d'),
 
-  // Encryption
-  ENCRYPTION_KEY: z.string().default('dev-encryption-key-change-in-production-32ch'),
+  // Encryption - no default in production
+  ENCRYPTION_KEY: z.string().min(1),
 
   // Orange Money
   ORANGE_MONEY_BASE_URL: z.string().default(''),
