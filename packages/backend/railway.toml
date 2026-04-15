@@ -1,9 +1,9 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm install && npx tsc"
+buildCommand = "npm install --prefix /app/packages/backend && cd /app/packages/backend && npx tsc"
 
 [deploy]
-startCommand = "npx knex migrate:latest --knexfile knexfile.js --env production 2>&1 || true && node dist/index.js"
+startCommand = "cd /app/packages/backend && (npx knex migrate:latest --knexfile knexfile.js --env production 2>&1 || true) && node dist/index.js"
 healthcheckPath = "/health"
 healthcheckTimeout = 300
 restartPolicyType = "on_failure"

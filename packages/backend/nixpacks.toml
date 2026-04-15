@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install --ignore-scripts"]
+cmds = ["npm install --prefix /app/packages/backend"]
 
 [phases.build]
-cmds = ["npx tsc"]
+cmds = ["cd /app/packages/backend && npx tsc"]
 
 [start]
-cmd = "npx knex migrate:latest --knexfile knexfile.js --env production 2>&1 || true; node dist/index.js"
+cmd = "cd /app/packages/backend && (npx knex migrate:latest --knexfile knexfile.js --env production 2>&1 || true) && node dist/index.js"

@@ -2,10 +2,10 @@
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["npm install --ignore-scripts"]
+cmds = ["npm install --prefix /app/packages/frontend"]
 
 [phases.build]
-cmds = ["npx next build"]
+cmds = ["cd /app/packages/frontend && npx next build"]
 
 [start]
-cmd = "npx next start -p ${PORT:-3000}"
+cmd = "cd /app/packages/frontend && npx next start -H 0.0.0.0 -p ${PORT:-3000}"
