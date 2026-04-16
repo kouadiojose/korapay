@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Landmark, ArrowDownToLine } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 import type { Settlement } from '@/types/transaction.types';
 
 const MOCK_SETTLEMENTS: Settlement[] = [
@@ -86,13 +88,25 @@ export default function SettlementsPage() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const fetchSettlements = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/settlements', { params: { per_page: 20 } });
+      const responseData = res.data.data;
+      const data = responseData?.data ?? responseData ?? [];
+      setSettlements(data);
+    } catch (err) {
+      console.error('Failed to fetch settlements:', err);
+      toast.error('Erreur lors du chargement des règlements');
       setSettlements(MOCK_SETTLEMENTS);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSettlements();
+  }, [fetchSettlements]);
 
   const totalSettled = settlements
     .filter((s) => s.status === 'settled')

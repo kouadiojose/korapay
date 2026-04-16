@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Send, ArrowUpRight } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatCurrency, formatDate, getPaymentMethodLabel } from '@/lib/utils';
+import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Payout } from '@/types/transaction.types';
 
@@ -97,42 +98,52 @@ export default function PayoutsPage() {
     description: '',
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const fetchPayouts = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/payouts', { params: { per_page: 20 } });
+      const responseData = res.data.data;
+      const data = responseData?.data ?? responseData ?? [];
+      setPayouts(data);
+    } catch (err) {
+      console.error('Failed to fetch payouts:', err);
+      toast.error('Erreur lors du chargement des décaissements');
       setPayouts(MOCK_PAYOUTS);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    fetchPayouts();
+  }, [fetchPayouts]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.amount || !form.recipient) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
     setIsSubmitting(true);
-    setTimeout(() => {
-      const newPayout: Payout = {
-        id: `po_${Date.now()}`,
-        reference: `KP-PAY-${Date.now()}`,
+    try {
+      await api.post('/payouts', {
         amount: parseFloat(form.amount),
         currency: form.currency,
-        fee: parseFloat(form.amount) * 0.015,
-        net_amount: parseFloat(form.amount) * 0.985,
+        recipient: form.recipient,
         payment_method: form.payment_method,
-        recipient_phone: form.recipient,
-        recipient_name: 'Nouveau Bénéficiaire',
-        status: 'processing',
         description: form.description,
-        created_at: new Date().toISOString(),
-      };
-      setPayouts([newPayout, ...payouts]);
+      });
       setShowModal(false);
       setForm({ amount: '', currency: 'XOF', recipient: '', payment_method: 'orange_money', description: '' });
-      setIsSubmitting(false);
       toast.success('Décaissement initié avec succès');
-    }, 1000);
+      // Refresh list from the API
+      fetchPayouts();
+    } catch (err) {
+      console.error('Failed to create payout:', err);
+      toast.error('Erreur lors de la création du décaissement');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (

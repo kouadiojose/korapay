@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { Shield, Lock } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -10,6 +10,8 @@ import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector';
 import MobileMoneyForm from '@/components/checkout/MobileMoneyForm';
 import CardForm from '@/components/checkout/CardForm';
 import PaymentStatus from '@/components/checkout/PaymentStatus';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 
 const MOCK_SESSION = {
   reference: 'KP-CHK-2026-001',
@@ -37,63 +39,160 @@ export default function CheckoutPage() {
   } = useCheckoutStore();
 
   const [isProcessing, setIsProcessing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Fetch checkout session from API
   useEffect(() => {
-    // Load mock checkout session
-    setSession({
-      ...MOCK_SESSION,
-      reference: (params.reference as string) || MOCK_SESSION.reference,
-    });
+    const reference = params.reference as string;
 
-    return () => reset();
+    const fetchSession = async () => {
+      try {
+        const res = await api.get(`/checkout/${reference}`);
+        const data = res.data.data;
+        setSession({
+          reference: data.reference || reference,
+          merchantName: data.merchant_name || 'Merchant',
+          merchantLogo: data.merchant_logo,
+          amount: data.amount,
+          currency: data.currency,
+          description: data.description,
+          customerEmail: data.customer_email,
+          customerPhone: data.customer_phone,
+        });
+      } catch (err) {
+        console.error('Failed to fetch checkout session:', err);
+        // Fallback to mock session
+        setSession({
+          ...MOCK_SESSION,
+          reference: reference || MOCK_SESSION.reference,
+        });
+        setLoadError('Impossible de charger la session de paiement. Données de démonstration affichées.');
+        toast.error('Erreur lors du chargement de la session de paiement');
+      }
+    };
+
+    fetchSession();
+
+    return () => {
+      reset();
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
   }, [params.reference, setSession, reset]);
 
-  const handleMobileMoneySubmit = (phone: string) => {
+  // Poll payment status
+  const pollStatus = useCallback((reference: string) => {
+    // Clear any existing polling
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
+
+    let pollCount = 0;
+    const maxPolls = 30; // Max ~60 seconds of polling
+
+    pollingRef.current = setInterval(async () => {
+      pollCount++;
+
+      try {
+        const res = await api.get(`/checkout/${reference}/status`);
+        const data = res.data.data;
+        const paymentStatus = data.status;
+
+        if (paymentStatus === 'success' || paymentStatus === 'successful') {
+          setStatus('success');
+          setIsProcessing(false);
+          if (pollingRef.current) clearInterval(pollingRef.current);
+        } else if (paymentStatus === 'failed') {
+          setStatus('failed');
+          setError(data.message || 'Le paiement a échoué. Veuillez réessayer.');
+          setIsProcessing(false);
+          if (pollingRef.current) clearInterval(pollingRef.current);
+        }
+        // Otherwise keep polling for 'pending' / 'processing'
+      } catch (err) {
+        console.error('Failed to poll payment status:', err);
+      }
+
+      if (pollCount >= maxPolls) {
+        if (pollingRef.current) clearInterval(pollingRef.current);
+        setStatus('failed');
+        setError('Le délai de paiement a expiré. Veuillez réessayer.');
+        setIsProcessing(false);
+      }
+    }, 2000);
+  }, [setStatus, setError]);
+
+  const handleMobileMoneySubmit = async (phone: string) => {
     setIsProcessing(true);
     setStatus('processing');
 
-    // Simulate payment processing
-    setTimeout(() => {
-      // Simulate success (80% chance) or failure (20% chance)
-      const isSuccess = Math.random() > 0.2;
-      if (isSuccess) {
-        setStatus('success');
-      } else {
-        setStatus('failed');
-        setError('Le paiement a été refusé par l\'opérateur. Veuillez réessayer.');
-      }
+    const reference = (params.reference as string) || session?.reference;
+    if (!reference) return;
+
+    try {
+      await api.post(`/checkout/${reference}/pay`, {
+        payment_method: selectedMethod,
+        phone,
+      });
+      // Start polling for status
+      pollStatus(reference);
+    } catch (err: unknown) {
+      console.error('Failed to process mobile money payment:', err);
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'Le paiement a échoué. Veuillez réessayer.';
+      setStatus('failed');
+      setError(errorMessage);
       setIsProcessing(false);
-    }, 3000);
+    }
   };
 
-  const handleCardSubmit = (cardData: { number: string; expiry: string; cvv: string }) => {
+  const handleCardSubmit = async (cardData: { number: string; expiry: string; cvv: string }) => {
     setIsProcessing(true);
     setStatus('processing');
 
-    setTimeout(() => {
-      const isSuccess = Math.random() > 0.2;
-      if (isSuccess) {
-        setStatus('success');
-      } else {
-        setStatus('failed');
-        setError('Transaction refusée. Veuillez vérifier vos informations de carte.');
-      }
+    const reference = (params.reference as string) || session?.reference;
+    if (!reference) return;
+
+    try {
+      await api.post(`/checkout/${reference}/pay`, {
+        payment_method: 'bank_card',
+        card: cardData,
+      });
+      // Start polling for status
+      pollStatus(reference);
+    } catch (err: unknown) {
+      console.error('Failed to process card payment:', err);
+      const errorMessage = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+        || 'Transaction refusée. Veuillez vérifier vos informations de carte.';
+      setStatus('failed');
+      setError(errorMessage);
       setIsProcessing(false);
-    }, 3000);
+    }
   };
 
   const handleRetry = () => {
     setStatus('selecting');
     setError(null);
     setSelectedMethod(null as unknown as PaymentMethod);
+    if (pollingRef.current) {
+      clearInterval(pollingRef.current);
+    }
   };
 
   if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-500">Chargement du paiement...</p>
+          {loadError ? (
+            <p className="text-red-500">{loadError}</p>
+          ) : (
+            <>
+              <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-gray-500">Chargement du paiement...</p>
+            </>
+          )}
         </div>
       </div>
     );

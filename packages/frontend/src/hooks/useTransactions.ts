@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 import type { Transaction, TransactionFilters } from '@/types/transaction.types';
 
 const MOCK_TRANSACTIONS: Transaction[] = [
@@ -93,130 +95,6 @@ const MOCK_TRANSACTIONS: Transaction[] = [
     created_at: '2026-04-12T14:30:00Z',
     updated_at: '2026-04-12T14:31:00Z',
   },
-  {
-    id: 'txn_006',
-    reference: 'KP-TXN-2026-006',
-    type: 'collection',
-    amount: 35000,
-    currency: 'XOF',
-    fee: 525,
-    net_amount: 34475,
-    payment_method: 'moov_money',
-    status: 'success',
-    provider: 'moov_ci',
-    customer_email: 'jean@email.com',
-    customer_phone: '+2250601234567',
-    customer_name: 'Jean Kouassi',
-    description: 'Recharge compte',
-    created_at: '2026-04-12T11:20:00Z',
-    updated_at: '2026-04-12T11:21:00Z',
-  },
-  {
-    id: 'txn_007',
-    reference: 'KP-TXN-2026-007',
-    type: 'collection',
-    amount: 120000,
-    currency: 'XOF',
-    fee: 1800,
-    net_amount: 118200,
-    payment_method: 'orange_money',
-    status: 'success',
-    provider: 'orange_ci',
-    customer_email: 'marie@email.com',
-    customer_phone: '+2250701234569',
-    customer_name: 'Marie Coulibaly',
-    description: 'Facture #9012',
-    created_at: '2026-04-11T15:45:00Z',
-    updated_at: '2026-04-11T15:46:00Z',
-  },
-  {
-    id: 'txn_008',
-    reference: 'KP-TXN-2026-008',
-    type: 'payout',
-    amount: 200000,
-    currency: 'XOF',
-    fee: 3000,
-    net_amount: 197000,
-    payment_method: 'mtn_momo',
-    status: 'processing',
-    provider: 'mtn_ci',
-    customer_phone: '+2250501234568',
-    customer_name: 'Paul Yao',
-    description: 'Paiement fournisseur',
-    created_at: '2026-04-11T10:00:00Z',
-    updated_at: '2026-04-11T10:00:00Z',
-  },
-  {
-    id: 'txn_009',
-    reference: 'KP-TXN-2026-009',
-    type: 'collection',
-    amount: 8500,
-    currency: 'XOF',
-    fee: 128,
-    net_amount: 8372,
-    payment_method: 'wave',
-    status: 'success',
-    provider: 'wave_ci',
-    customer_email: 'awa@email.com',
-    customer_phone: '+2250101234568',
-    customer_name: 'Awa Sanogo',
-    description: 'Micro-paiement',
-    created_at: '2026-04-10T09:30:00Z',
-    updated_at: '2026-04-10T09:31:00Z',
-  },
-  {
-    id: 'txn_010',
-    reference: 'KP-TXN-2026-010',
-    type: 'collection',
-    amount: 450000,
-    currency: 'XOF',
-    fee: 6750,
-    net_amount: 443250,
-    payment_method: 'bank_card',
-    status: 'success',
-    provider: 'stripe',
-    customer_email: 'pierre@enterprise.com',
-    customer_name: 'Pierre Dubois',
-    description: 'Licence annuelle',
-    created_at: '2026-04-10T08:00:00Z',
-    updated_at: '2026-04-10T08:02:00Z',
-  },
-  {
-    id: 'txn_011',
-    reference: 'KP-TXN-2026-011',
-    type: 'collection',
-    amount: 18000,
-    currency: 'XOF',
-    fee: 270,
-    net_amount: 17730,
-    payment_method: 'orange_money',
-    status: 'reversed',
-    provider: 'orange_ci',
-    customer_email: 'kofi@email.com',
-    customer_phone: '+2250701234570',
-    customer_name: 'Kofi Mensah',
-    description: 'Commande annulée #3456',
-    created_at: '2026-04-09T14:00:00Z',
-    updated_at: '2026-04-09T16:00:00Z',
-  },
-  {
-    id: 'txn_012',
-    reference: 'KP-TXN-2026-012',
-    type: 'collection',
-    amount: 62000,
-    currency: 'XOF',
-    fee: 930,
-    net_amount: 61070,
-    payment_method: 'mtn_momo',
-    status: 'success',
-    provider: 'mtn_ci',
-    customer_email: 'salif@email.com',
-    customer_phone: '+2250501234569',
-    customer_name: 'Salif Keita',
-    description: 'Service consulting',
-    created_at: '2026-04-09T11:30:00Z',
-    updated_at: '2026-04-09T11:31:00Z',
-  },
 ];
 
 export function useTransactions(filters?: TransactionFilters) {
@@ -224,11 +102,31 @@ export function useTransactions(filters?: TransactionFilters) {
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchTransactions = useCallback(() => {
+  const fetchTransactions = useCallback(async () => {
     setIsLoading(true);
+    try {
+      const params: Record<string, string | number> = {};
+      if (filters?.page) params.page = filters.page;
+      if (filters?.per_page) params.per_page = filters.per_page;
+      if (filters?.status) params.status = filters.status;
+      if (filters?.type) params.type = filters.type;
+      if (filters?.payment_method) params.payment_method = filters.payment_method;
+      if (filters?.date_from) params.from = filters.date_from;
+      if (filters?.date_to) params.to = filters.date_to;
+      if (filters?.search) params.search = filters.search;
 
-    // Simulate API call with mock data
-    setTimeout(() => {
+      const res = await api.get('/transactions', { params });
+      const responseData = res.data.data;
+
+      const txns = responseData?.data ?? responseData ?? [];
+      const pagination = responseData?.pagination;
+
+      setTransactions(txns);
+      setTotal(pagination?.total ?? txns.length);
+    } catch (err) {
+      console.error('Failed to fetch transactions:', err);
+      toast.error('Erreur lors du chargement des transactions');
+      // Graceful degradation: fall back to mock data with client-side filtering
       let filtered = [...MOCK_TRANSACTIONS];
 
       if (filters?.status) {
@@ -257,16 +155,23 @@ export function useTransactions(filters?: TransactionFilters) {
 
       setTotal(filtered.length);
       setTransactions(filtered.slice(start, end));
+    } finally {
       setIsLoading(false);
-    }, 500);
-  }, [filters?.status, filters?.payment_method, filters?.type, filters?.search, filters?.page, filters?.per_page]);
+    }
+  }, [filters?.status, filters?.payment_method, filters?.type, filters?.search, filters?.page, filters?.per_page, filters?.date_from, filters?.date_to]);
 
   useEffect(() => {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const getTransaction = useCallback((id: string): Transaction | undefined => {
-    return MOCK_TRANSACTIONS.find((t) => t.id === id);
+  const getTransaction = useCallback(async (reference: string): Promise<Transaction | undefined> => {
+    try {
+      const res = await api.get(`/transactions/${reference}`);
+      return res.data.data;
+    } catch (err) {
+      console.error('Failed to fetch transaction:', err);
+      return undefined;
+    }
   }, []);
 
   return {

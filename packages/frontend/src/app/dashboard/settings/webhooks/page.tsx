@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Trash2, Webhook as WebhookIcon, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
+import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Webhook } from '@/types/merchant.types';
 import { WEBHOOK_EVENTS } from '@/types/merchant.types';
@@ -52,13 +53,24 @@ export default function WebhooksPage() {
   const [newUrl, setNewUrl] = useState('');
   const [selectedEvents, setSelectedEvents] = useState<string[]>([]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const fetchWebhooks = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/merchants/webhooks');
+      const data = res.data.data ?? [];
+      setWebhooks(data);
+    } catch (err) {
+      console.error('Failed to fetch webhooks:', err);
+      toast.error('Erreur lors du chargement des webhooks');
       setWebhooks(MOCK_WEBHOOKS);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchWebhooks();
+  }, [fetchWebhooks]);
 
   const toggleEvent = (event: string) => {
     setSelectedEvents((prev) =>
@@ -66,7 +78,7 @@ export default function WebhooksPage() {
     );
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!newUrl.trim()) {
       toast.error('Veuillez entrer une URL');
       return;
@@ -76,28 +88,37 @@ export default function WebhooksPage() {
       return;
     }
     setIsCreating(true);
-    setTimeout(() => {
-      const newWebhook: Webhook = {
-        id: `wh_${Date.now()}`,
+    try {
+      await api.post('/merchants/webhooks', {
         url: newUrl,
         events: selectedEvents,
-        status: 'active',
-        secret_hash: `whsec_${Math.random().toString(36).substring(2, 14)}`,
-        failure_count: 0,
-        created_at: new Date().toISOString(),
-      };
-      setWebhooks([newWebhook, ...webhooks]);
+      });
       setShowModal(false);
       setNewUrl('');
       setSelectedEvents([]);
-      setIsCreating(false);
       toast.success('Webhook créé avec succès');
-    }, 800);
+      // Refresh list
+      fetchWebhooks();
+    } catch (err) {
+      console.error('Failed to create webhook:', err);
+      toast.error('Erreur lors de la création du webhook');
+    } finally {
+      setIsCreating(false);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    setWebhooks(webhooks.filter((w) => w.id !== id));
-    toast.success('Webhook supprimé');
+  const handleDelete = async (id: string) => {
+    try {
+      await api.delete(`/merchants/webhooks/${id}`);
+      toast.success('Webhook supprimé');
+      // Refresh list
+      fetchWebhooks();
+    } catch (err) {
+      console.error('Failed to delete webhook:', err);
+      toast.error('Erreur lors de la suppression du webhook');
+      // Optimistic fallback: remove locally
+      setWebhooks(webhooks.filter((w) => w.id !== id));
+    }
   };
 
   return (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, Eye, EyeOff, Copy, Trash2, AlertTriangle, Key } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -8,6 +8,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
+import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { ApiKey } from '@/types/merchant.types';
 
@@ -54,47 +55,69 @@ export default function ApiKeysPage() {
   const [revealedKeys, setRevealedKeys] = useState<Set<string>>(new Set());
   const [isCreating, setIsCreating] = useState(false);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
+  const fetchApiKeys = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/merchants/api-keys');
+      const data = res.data.data ?? [];
+      setApiKeys(data);
+    } catch (err) {
+      console.error('Failed to fetch API keys:', err);
+      toast.error('Erreur lors du chargement des clés API');
       setApiKeys(MOCK_API_KEYS);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    }
   }, []);
 
-  const handleCreate = () => {
+  useEffect(() => {
+    fetchApiKeys();
+  }, [fetchApiKeys]);
+
+  const handleCreate = async () => {
     if (!newKeyLabel.trim()) {
       toast.error('Veuillez entrer un nom pour la clé');
       return;
     }
     setIsCreating(true);
-    setTimeout(() => {
-      const newPublic = `pk_${newKeyEnv}_kp_${Math.random().toString(36).substring(2, 14)}`;
-      const newSecret = `sk_${newKeyEnv}_kp_${Math.random().toString(36).substring(2, 14)}`;
-
-      setGeneratedKey({ public_key: newPublic, secret_key: newSecret });
-
-      const newKey: ApiKey = {
-        id: `key_${Date.now()}`,
+    try {
+      const res = await api.post('/merchants/api-keys', {
         label: newKeyLabel,
         environment: newKeyEnv,
-        public_key: newPublic,
-        secret_key_hint: `sk_${newKeyEnv}_****${newSecret.slice(-4)}`,
-        status: 'active',
-        created_at: new Date().toISOString(),
-      };
+      });
+      const data = res.data.data;
 
-      setApiKeys([newKey, ...apiKeys]);
+      setGeneratedKey({
+        public_key: data.public_key,
+        secret_key: data.secret_key,
+      });
+
       setShowCreateModal(false);
       setShowKeyModal(true);
       setNewKeyLabel('');
+      toast.success('Clé API créée avec succès');
+      // Refresh the list to include the new key
+      fetchApiKeys();
+    } catch (err) {
+      console.error('Failed to create API key:', err);
+      toast.error('Erreur lors de la création de la clé API');
+    } finally {
       setIsCreating(false);
-    }, 800);
+    }
   };
 
-  const handleRevoke = (id: string) => {
-    setApiKeys(apiKeys.map((k) => (k.id === id ? { ...k, status: 'revoked' as const } : k)));
-    toast.success('Clé révoquée avec succès');
+  const handleRevoke = async (id: string) => {
+    try {
+      await api.delete(`/merchants/api-keys/${id}`);
+      toast.success('Clé révoquée avec succès');
+      // Refresh the list
+      fetchApiKeys();
+    } catch (err) {
+      console.error('Failed to revoke API key:', err);
+      toast.error('Erreur lors de la révocation de la clé');
+      // Optimistic fallback: update locally
+      setApiKeys(apiKeys.map((k) => (k.id === id ? { ...k, status: 'revoked' as const } : k)));
+    }
   };
 
   const toggleReveal = (id: string) => {

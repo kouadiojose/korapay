@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Wallet, ArrowUpRight, ArrowDownLeft, TrendingUp } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 import type { Wallet as WalletType, WalletTransaction } from '@/types/transaction.types';
 
 const MOCK_WALLETS: WalletType[] = [
@@ -25,23 +27,63 @@ const MOCK_WALLET_TRANSACTIONS: WalletTransaction[] = [
 ];
 
 export default function WalletsPage() {
-  const [selectedWallet, setSelectedWallet] = useState<string>('w1');
+  const [selectedWallet, setSelectedWallet] = useState<string>('');
   const [wallets, setWallets] = useState<WalletType[]>([]);
   const [walletTransactions, setWalletTransactions] = useState<WalletTransaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
 
+  // Fetch wallets
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setWallets(MOCK_WALLETS);
-      setWalletTransactions(MOCK_WALLET_TRANSACTIONS);
-      setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    const fetchWallets = async () => {
+      setIsLoading(true);
+      try {
+        const res = await api.get('/wallets');
+        const data = res.data.data ?? [];
+        setWallets(data);
+        if (data.length > 0) {
+          setSelectedWallet(data[0].id);
+        }
+      } catch (err) {
+        console.error('Failed to fetch wallets:', err);
+        toast.error('Erreur lors du chargement des portefeuilles');
+        // Fallback to mock data
+        setWallets(MOCK_WALLETS);
+        setSelectedWallet('w1');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchWallets();
   }, []);
 
-  const filteredTransactions = walletTransactions.filter(
-    (t) => t.wallet_id === selectedWallet
-  );
+  // Fetch wallet transactions when selected wallet changes
+  const fetchWalletTransactions = useCallback(async (currency: string) => {
+    if (!currency) return;
+    setIsLoadingTransactions(true);
+    try {
+      const res = await api.get(`/wallets/${currency}/transactions`, {
+        params: { per_page: 20 },
+      });
+      const responseData = res.data.data;
+      const txns = responseData?.data ?? responseData ?? [];
+      setWalletTransactions(txns);
+    } catch (err) {
+      console.error('Failed to fetch wallet transactions:', err);
+      toast.error('Erreur lors du chargement des mouvements');
+      // Fallback to mock wallet transactions
+      setWalletTransactions(MOCK_WALLET_TRANSACTIONS.filter((t) => t.wallet_id === selectedWallet));
+    } finally {
+      setIsLoadingTransactions(false);
+    }
+  }, [selectedWallet]);
+
+  useEffect(() => {
+    const wallet = wallets.find((w) => w.id === selectedWallet);
+    if (wallet) {
+      fetchWalletTransactions(wallet.currency);
+    }
+  }, [selectedWallet, wallets, fetchWalletTransactions]);
 
   if (isLoading) {
     return (
@@ -119,82 +161,90 @@ export default function WalletsPage() {
           </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-y border-gray-100 bg-gray-50/50">
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Description
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
-                  Référence
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  Montant
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                  Solde après
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filteredTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                    Aucun mouvement pour ce portefeuille
-                  </td>
+        {isLoadingTransactions ? (
+          <div className="p-6 space-y-4">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-y border-gray-100 bg-gray-50/50">
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Description
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                    Référence
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                    Montant
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                    Solde après
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                    Date
+                  </th>
                 </tr>
-              ) : (
-                filteredTransactions.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                            t.type === 'credit'
-                              ? 'bg-green-50 text-green-600'
-                              : 'bg-red-50 text-red-600'
-                          }`}
-                        >
-                          {t.type === 'credit' ? (
-                            <ArrowDownLeft size={16} />
-                          ) : (
-                            <ArrowUpRight size={16} />
-                          )}
-                        </div>
-                        <span className="text-sm text-gray-900">{t.description}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 hidden sm:table-cell">
-                      <span className="text-sm text-gray-500 font-mono">{t.reference}</span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span
-                        className={`text-sm font-semibold ${
-                          t.type === 'credit' ? 'text-green-600' : 'text-red-600'
-                        }`}
-                      >
-                        {t.type === 'credit' ? '+' : '-'}
-                        {formatCurrency(t.amount, wallets.find((w) => w.id === selectedWallet)?.currency)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 hidden md:table-cell">
-                      <span className="text-sm text-gray-700">
-                        {formatCurrency(t.balance_after, wallets.find((w) => w.id === selectedWallet)?.currency)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 hidden lg:table-cell">
-                      <span className="text-sm text-gray-500">{formatDate(t.created_at)}</span>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {walletTransactions.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                      Aucun mouvement pour ce portefeuille
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  walletTransactions.map((t) => (
+                    <tr key={t.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                              t.type === 'credit'
+                                ? 'bg-green-50 text-green-600'
+                                : 'bg-red-50 text-red-600'
+                            }`}
+                          >
+                            {t.type === 'credit' ? (
+                              <ArrowDownLeft size={16} />
+                            ) : (
+                              <ArrowUpRight size={16} />
+                            )}
+                          </div>
+                          <span className="text-sm text-gray-900">{t.description}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 hidden sm:table-cell">
+                        <span className="text-sm text-gray-500 font-mono">{t.reference}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`text-sm font-semibold ${
+                            t.type === 'credit' ? 'text-green-600' : 'text-red-600'
+                          }`}
+                        >
+                          {t.type === 'credit' ? '+' : '-'}
+                          {formatCurrency(t.amount, wallets.find((w) => w.id === selectedWallet)?.currency)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <span className="text-sm text-gray-700">
+                          {formatCurrency(t.balance_after, wallets.find((w) => w.id === selectedWallet)?.currency)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 hidden lg:table-cell">
+                        <span className="text-sm text-gray-500">{formatDate(t.created_at)}</span>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </Card>
     </div>
   );
