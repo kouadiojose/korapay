@@ -13,38 +13,6 @@ import toast from 'react-hot-toast';
 import type { Webhook } from '@/types/merchant.types';
 import { WEBHOOK_EVENTS } from '@/types/merchant.types';
 
-const MOCK_WEBHOOKS: Webhook[] = [
-  {
-    id: 'wh_001',
-    url: 'https://api.myapp.com/webhooks/korapay',
-    events: ['charge.success', 'charge.failed', 'payout.success'],
-    status: 'active',
-    secret_hash: 'whsec_abc123def456',
-    last_triggered_at: '2026-04-13T10:31:00Z',
-    failure_count: 0,
-    created_at: '2026-01-10T08:00:00Z',
-  },
-  {
-    id: 'wh_002',
-    url: 'https://hooks.slack.com/services/T00/B00/xxxx',
-    events: ['charge.success', 'settlement.completed'],
-    status: 'active',
-    secret_hash: 'whsec_xyz789ghi012',
-    last_triggered_at: '2026-04-12T14:00:00Z',
-    failure_count: 2,
-    created_at: '2026-02-15T08:00:00Z',
-  },
-  {
-    id: 'wh_003',
-    url: 'https://old-api.example.com/callback',
-    events: ['charge.success'],
-    status: 'inactive',
-    secret_hash: 'whsec_old456old789',
-    failure_count: 10,
-    created_at: '2025-11-01T08:00:00Z',
-  },
-];
-
 export default function WebhooksPage() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -62,7 +30,7 @@ export default function WebhooksPage() {
     } catch (err) {
       console.error('Failed to fetch webhooks:', err);
       toast.error('Erreur lors du chargement des webhooks');
-      setWebhooks(MOCK_WEBHOOKS);
+      setWebhooks([]);
     } finally {
       setIsLoading(false);
     }

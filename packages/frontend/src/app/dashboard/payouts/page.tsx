@@ -12,79 +12,6 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Payout } from '@/types/transaction.types';
 
-const MOCK_PAYOUTS: Payout[] = [
-  {
-    id: 'po_001',
-    reference: 'KP-PAY-2026-001',
-    amount: 100000,
-    currency: 'XOF',
-    fee: 1500,
-    net_amount: 98500,
-    payment_method: 'orange_money',
-    recipient_phone: '+2250701234568',
-    recipient_name: 'Moussa Traoré',
-    status: 'success',
-    description: 'Remboursement commande',
-    created_at: '2026-04-12T16:00:00Z',
-  },
-  {
-    id: 'po_002',
-    reference: 'KP-PAY-2026-002',
-    amount: 200000,
-    currency: 'XOF',
-    fee: 3000,
-    net_amount: 197000,
-    payment_method: 'mtn_momo',
-    recipient_phone: '+2250501234568',
-    recipient_name: 'Paul Yao',
-    status: 'processing',
-    description: 'Paiement fournisseur',
-    created_at: '2026-04-11T10:00:00Z',
-  },
-  {
-    id: 'po_003',
-    reference: 'KP-PAY-2026-003',
-    amount: 50000,
-    currency: 'XOF',
-    fee: 750,
-    net_amount: 49250,
-    payment_method: 'wave',
-    recipient_phone: '+2250101234567',
-    recipient_name: 'Aminata Sow',
-    status: 'success',
-    description: 'Salaire freelance',
-    created_at: '2026-04-10T14:30:00Z',
-  },
-  {
-    id: 'po_004',
-    reference: 'KP-PAY-2026-004',
-    amount: 75000,
-    currency: 'XOF',
-    fee: 1125,
-    net_amount: 73875,
-    payment_method: 'orange_money',
-    recipient_phone: '+2250701234570',
-    recipient_name: 'Seydou Diarra',
-    status: 'failed',
-    description: 'Remboursement client',
-    created_at: '2026-04-09T09:00:00Z',
-  },
-  {
-    id: 'po_005',
-    reference: 'KP-PAY-2026-005',
-    amount: 300000,
-    currency: 'XOF',
-    fee: 4500,
-    net_amount: 295500,
-    payment_method: 'mtn_momo',
-    recipient_phone: '+2250501234570',
-    recipient_name: 'Compagnie XYZ',
-    status: 'success',
-    description: 'Paiement partenaire',
-    created_at: '2026-04-08T11:00:00Z',
-  },
-];
-
 export default function PayoutsPage() {
   const [payouts, setPayouts] = useState<Payout[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -108,7 +35,7 @@ export default function PayoutsPage() {
     } catch (err) {
       console.error('Failed to fetch payouts:', err);
       toast.error('Erreur lors du chargement des décaissements');
-      setPayouts(MOCK_PAYOUTS);
+      setPayouts([]);
     } finally {
       setIsLoading(false);
     }
@@ -193,7 +120,7 @@ export default function PayoutsPage() {
                 {payouts.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
-                      Aucun décaissement effectué
+                      Aucun paiement disponible
                     </td>
                   </tr>
                 ) : (

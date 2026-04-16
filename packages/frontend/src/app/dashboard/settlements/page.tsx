@@ -9,81 +9,6 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { Settlement } from '@/types/transaction.types';
 
-const MOCK_SETTLEMENTS: Settlement[] = [
-  {
-    id: 'stl_001',
-    amount: 2500000,
-    currency: 'XOF',
-    fee: 25000,
-    net_amount: 2475000,
-    status: 'settled',
-    settlement_date: '2026-04-12T00:00:00Z',
-    bank_name: 'Banque Atlantique',
-    account_number: '****4521',
-    created_at: '2026-04-12T08:00:00Z',
-  },
-  {
-    id: 'stl_002',
-    amount: 1800000,
-    currency: 'XOF',
-    fee: 18000,
-    net_amount: 1782000,
-    status: 'processing',
-    settlement_date: '2026-04-13T00:00:00Z',
-    bank_name: 'Banque Atlantique',
-    account_number: '****4521',
-    created_at: '2026-04-13T08:00:00Z',
-  },
-  {
-    id: 'stl_003',
-    amount: 3200000,
-    currency: 'XOF',
-    fee: 32000,
-    net_amount: 3168000,
-    status: 'settled',
-    settlement_date: '2026-04-10T00:00:00Z',
-    bank_name: 'Banque Atlantique',
-    account_number: '****4521',
-    created_at: '2026-04-10T08:00:00Z',
-  },
-  {
-    id: 'stl_004',
-    amount: 950000,
-    currency: 'XOF',
-    fee: 9500,
-    net_amount: 940500,
-    status: 'settled',
-    settlement_date: '2026-04-08T00:00:00Z',
-    bank_name: 'Banque Atlantique',
-    account_number: '****4521',
-    created_at: '2026-04-08T08:00:00Z',
-  },
-  {
-    id: 'stl_005',
-    amount: 4100000,
-    currency: 'XOF',
-    fee: 41000,
-    net_amount: 4059000,
-    status: 'settled',
-    settlement_date: '2026-04-05T00:00:00Z',
-    bank_name: 'Banque Atlantique',
-    account_number: '****4521',
-    created_at: '2026-04-05T08:00:00Z',
-  },
-  {
-    id: 'stl_006',
-    amount: 750000,
-    currency: 'XOF',
-    fee: 7500,
-    net_amount: 742500,
-    status: 'pending',
-    settlement_date: '2026-04-14T00:00:00Z',
-    bank_name: 'Banque Atlantique',
-    account_number: '****4521',
-    created_at: '2026-04-14T00:00:00Z',
-  },
-];
-
 export default function SettlementsPage() {
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,7 +23,7 @@ export default function SettlementsPage() {
     } catch (err) {
       console.error('Failed to fetch settlements:', err);
       toast.error('Erreur lors du chargement des règlements');
-      setSettlements(MOCK_SETTLEMENTS);
+      setSettlements([]);
     } finally {
       setIsLoading(false);
     }
@@ -164,6 +89,10 @@ export default function SettlementsPage() {
             {[...Array(5)].map((_, i) => (
               <div key={i} className="h-14 bg-gray-100 rounded animate-pulse" />
             ))}
+          </div>
+        ) : settlements.length === 0 ? (
+          <div className="px-6 py-12 text-center text-gray-500">
+            Aucun règlement disponible
           </div>
         ) : (
           <div className="overflow-x-auto">

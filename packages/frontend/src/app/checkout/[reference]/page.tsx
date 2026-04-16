@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
-import { Shield, Lock } from 'lucide-react';
+import { Shield, Lock, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import { useCheckoutStore } from '@/stores/checkoutStore';
 import type { PaymentMethod } from '@/stores/checkoutStore';
@@ -12,17 +12,6 @@ import CardForm from '@/components/checkout/CardForm';
 import PaymentStatus from '@/components/checkout/PaymentStatus';
 import api from '@/lib/api';
 import toast from 'react-hot-toast';
-
-const MOCK_SESSION = {
-  reference: 'KP-CHK-2026-001',
-  merchantName: 'TechShop CI',
-  merchantLogo: undefined,
-  amount: 25000,
-  currency: 'XOF',
-  description: 'Commande #1234 - TechShop CI',
-  customerEmail: 'client@email.com',
-  customerPhone: '',
-};
 
 export default function CheckoutPage() {
   const params = useParams();
@@ -62,12 +51,7 @@ export default function CheckoutPage() {
         });
       } catch (err) {
         console.error('Failed to fetch checkout session:', err);
-        // Fallback to mock session
-        setSession({
-          ...MOCK_SESSION,
-          reference: reference || MOCK_SESSION.reference,
-        });
-        setLoadError('Impossible de charger la session de paiement. Données de démonstration affichées.');
+        setLoadError('Session de paiement introuvable');
         toast.error('Erreur lors du chargement de la session de paiement');
       }
     };
@@ -186,7 +170,11 @@ export default function CheckoutPage() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           {loadError ? (
-            <p className="text-red-500">{loadError}</p>
+            <div className="space-y-4">
+              <AlertTriangle size={48} className="text-red-400 mx-auto" />
+              <p className="text-lg font-semibold text-gray-900">{loadError}</p>
+              <p className="text-sm text-gray-500">Veuillez vérifier le lien de paiement et réessayer.</p>
+            </div>
           ) : (
             <>
               <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />

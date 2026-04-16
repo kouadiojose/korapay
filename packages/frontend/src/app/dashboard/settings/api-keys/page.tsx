@@ -12,38 +12,6 @@ import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { ApiKey } from '@/types/merchant.types';
 
-const MOCK_API_KEYS: ApiKey[] = [
-  {
-    id: 'key_001',
-    label: 'Test Key - Development',
-    environment: 'test',
-    public_key: 'pk_test_kp_abc123def456',
-    secret_key_hint: 'sk_test_****ef56',
-    status: 'active',
-    last_used_at: '2026-04-13T10:30:00Z',
-    created_at: '2026-01-15T08:00:00Z',
-  },
-  {
-    id: 'key_002',
-    label: 'Live Key - Production',
-    environment: 'live',
-    public_key: 'pk_live_kp_xyz789ghi012',
-    secret_key_hint: 'sk_live_****i012',
-    status: 'active',
-    last_used_at: '2026-04-12T14:00:00Z',
-    created_at: '2026-02-20T08:00:00Z',
-  },
-  {
-    id: 'key_003',
-    label: 'Old Test Key',
-    environment: 'test',
-    public_key: 'pk_test_kp_old123old456',
-    secret_key_hint: 'sk_test_****d456',
-    status: 'revoked',
-    created_at: '2025-12-01T08:00:00Z',
-  },
-];
-
 export default function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -64,7 +32,7 @@ export default function ApiKeysPage() {
     } catch (err) {
       console.error('Failed to fetch API keys:', err);
       toast.error('Erreur lors du chargement des clés API');
-      setApiKeys(MOCK_API_KEYS);
+      setApiKeys([]);
     } finally {
       setIsLoading(false);
     }
@@ -156,6 +124,18 @@ export default function ApiKeysPage() {
               <div className="h-4 bg-gray-200 rounded w-96" />
             </Card>
           ))
+        ) : apiKeys.length === 0 ? (
+          <Card className="text-center py-12">
+            <Key size={40} className="text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune clé API</h3>
+            <p className="text-gray-500 mb-6">
+              Créez une clé API pour commencer à intégrer KoraPay
+            </p>
+            <Button onClick={() => setShowCreateModal(true)}>
+              <Plus size={18} className="mr-2" />
+              Nouvelle clé
+            </Button>
+          </Card>
         ) : (
           apiKeys.map((key) => (
             <Card key={key.id} className="hover:shadow-sm transition-shadow">

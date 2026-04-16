@@ -1,50 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Upload, FileText, CheckCircle2, XCircle, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Modal from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
+import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { KycDocument, KycDocumentType } from '@/types/merchant.types';
 import { KYC_DOCUMENT_TYPES } from '@/types/merchant.types';
-
-const MOCK_KYC_DOCUMENTS: KycDocument[] = [
-  {
-    id: 'doc_001',
-    type: 'national_id',
-    file_name: 'carte_identite_recto_verso.pdf',
-    status: 'approved',
-    uploaded_at: '2026-01-20T08:00:00Z',
-    reviewed_at: '2026-01-22T14:00:00Z',
-  },
-  {
-    id: 'doc_002',
-    type: 'business_registration',
-    file_name: 'registre_commerce_RCCM.pdf',
-    status: 'approved',
-    uploaded_at: '2026-01-20T08:05:00Z',
-    reviewed_at: '2026-01-22T14:30:00Z',
-  },
-  {
-    id: 'doc_003',
-    type: 'proof_of_address',
-    file_name: 'facture_electricite_mars2026.pdf',
-    status: 'under_review',
-    uploaded_at: '2026-04-10T09:00:00Z',
-  },
-  {
-    id: 'doc_004',
-    type: 'tax_certificate',
-    file_name: 'attestation_fiscale_2025.pdf',
-    status: 'rejected',
-    rejection_reason: 'Document expiré. Veuillez fournir un document de l\'année en cours.',
-    uploaded_at: '2026-03-15T10:00:00Z',
-    reviewed_at: '2026-03-18T11:00:00Z',
-  },
-];
 
 const KYC_STATUS_MAP: Record<string, string> = {
   pending: 'En attente',
@@ -67,37 +33,54 @@ export default function KycPage() {
   const [selectedType, setSelectedType] = useState<KycDocumentType>('national_id');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [overallStatus, setOverallStatus] = useState<string>('pending');
 
-  const overallStatus: string = 'under_review';
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDocuments(MOCK_KYC_DOCUMENTS);
+  const fetchKycDocuments = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/merchants/kyc');
+      const data = res.data.data;
+      const docs = data?.documents ?? data ?? [];
+      setDocuments(Array.isArray(docs) ? docs : []);
+      if (data?.status) {
+        setOverallStatus(data.status);
+      }
+    } catch (err) {
+      console.error('Failed to fetch KYC documents:', err);
+      toast.error('Erreur lors du chargement des documents KYC');
+      setDocuments([]);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    }
   }, []);
 
-  const handleUpload = () => {
+  useEffect(() => {
+    fetchKycDocuments();
+  }, [fetchKycDocuments]);
+
+  const handleUpload = async () => {
     if (!selectedFile) {
       toast.error('Veuillez sélectionner un fichier');
       return;
     }
     setIsUploading(true);
-    setTimeout(() => {
-      const newDoc: KycDocument = {
-        id: `doc_${Date.now()}`,
-        type: selectedType,
-        file_name: selectedFile.name,
-        status: 'pending',
-        uploaded_at: new Date().toISOString(),
-      };
-      setDocuments([...documents, newDoc]);
+    try {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('type', selectedType);
+      await api.post('/merchants/kyc/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
       setShowModal(false);
       setSelectedFile(null);
-      setIsUploading(false);
       toast.success('Document soumis avec succès');
-    }, 1000);
+      fetchKycDocuments();
+    } catch (err) {
+      console.error('Failed to upload KYC document:', err);
+      toast.error('Erreur lors de la soumission du document');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const approvedCount = documents.filter((d) => d.status === 'approved').length;
@@ -132,7 +115,7 @@ export default function KycPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-gray-900">Statut KYC</h3>
-                <Badge status={overallStatus} label={KYC_STATUS_MAP[overallStatus]} />
+                <Badge status={overallStatus} label={KYC_STATUS_MAP[overallStatus] || overallStatus} />
               </div>
               <p className="text-sm text-gray-500 mt-1">
                 {approvedCount} sur {totalRequired} documents approuvés

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, MoreVertical, Mail, Shield, UserCircle } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import Badge from '@/components/ui/Badge';
@@ -8,50 +8,9 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatDate } from '@/lib/utils';
+import api from '@/lib/api';
 import toast from 'react-hot-toast';
 import type { TeamMember } from '@/types/merchant.types';
-
-const MOCK_TEAM: TeamMember[] = [
-  {
-    id: 'tm_001',
-    email: 'amadou@korapay-demo.com',
-    first_name: 'Amadou',
-    last_name: 'Koné',
-    role: 'owner',
-    status: 'active',
-    last_login_at: '2026-04-13T10:30:00Z',
-    created_at: '2026-01-01T08:00:00Z',
-  },
-  {
-    id: 'tm_002',
-    email: 'fatou@korapay-demo.com',
-    first_name: 'Fatou',
-    last_name: 'Diallo',
-    role: 'admin',
-    status: 'active',
-    last_login_at: '2026-04-12T14:00:00Z',
-    created_at: '2026-02-01T08:00:00Z',
-  },
-  {
-    id: 'tm_003',
-    email: 'ibrahim@korapay-demo.com',
-    first_name: 'Ibrahim',
-    last_name: 'Touré',
-    role: 'developer',
-    status: 'active',
-    last_login_at: '2026-04-11T09:00:00Z',
-    created_at: '2026-03-01T08:00:00Z',
-  },
-  {
-    id: 'tm_004',
-    email: 'marie@korapay-demo.com',
-    first_name: 'Marie',
-    last_name: 'Coulibaly',
-    role: 'viewer',
-    status: 'pending',
-    created_at: '2026-04-10T08:00:00Z',
-  },
-];
 
 const ROLE_LABELS: Record<string, string> = {
   owner: 'Propriétaire',
@@ -79,36 +38,48 @@ export default function TeamPage() {
     role: 'developer' as 'admin' | 'developer' | 'viewer',
   });
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setTeam(MOCK_TEAM);
+  const fetchTeam = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get('/merchants/team');
+      const data = res.data.data ?? [];
+      setTeam(data);
+    } catch (err) {
+      console.error('Failed to fetch team members:', err);
+      toast.error('Erreur lors du chargement de l\'équipe');
+      setTeam([]);
+    } finally {
       setIsLoading(false);
-    }, 500);
-    return () => clearTimeout(timer);
+    }
   }, []);
 
-  const handleInvite = () => {
+  useEffect(() => {
+    fetchTeam();
+  }, [fetchTeam]);
+
+  const handleInvite = async () => {
     if (!inviteForm.email || !inviteForm.first_name || !inviteForm.last_name) {
       toast.error('Veuillez remplir tous les champs');
       return;
     }
     setIsInviting(true);
-    setTimeout(() => {
-      const newMember: TeamMember = {
-        id: `tm_${Date.now()}`,
+    try {
+      await api.post('/merchants/team/invite', {
         email: inviteForm.email,
         first_name: inviteForm.first_name,
         last_name: inviteForm.last_name,
         role: inviteForm.role,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      };
-      setTeam([...team, newMember]);
+      });
       setShowModal(false);
       setInviteForm({ email: '', first_name: '', last_name: '', role: 'developer' });
-      setIsInviting(false);
       toast.success('Invitation envoyée avec succès');
-    }, 800);
+      fetchTeam();
+    } catch (err) {
+      console.error('Failed to invite team member:', err);
+      toast.error('Erreur lors de l\'envoi de l\'invitation');
+    } finally {
+      setIsInviting(false);
+    }
   };
 
   return (
@@ -131,6 +102,12 @@ export default function TeamPage() {
             {[...Array(4)].map((_, i) => (
               <div key={i} className="h-16 bg-gray-100 rounded animate-pulse" />
             ))}
+          </div>
+        ) : team.length === 0 ? (
+          <div className="px-6 py-12 text-center text-gray-500">
+            <UserCircle size={40} className="text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Aucune donnée disponible</h3>
+            <p className="text-gray-500">Invitez des membres pour collaborer</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

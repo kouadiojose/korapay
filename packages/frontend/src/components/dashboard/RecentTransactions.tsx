@@ -63,7 +63,13 @@ export default function RecentTransactions({ transactions, isLoading }: RecentTr
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-50">
-            {transactions.map((txn) => (
+            {transactions.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  Aucune donnée disponible
+                </td>
+              </tr>
+            ) : transactions.map((txn) => (
               <tr
                 key={txn.id}
                 onClick={() => router.push(`/dashboard/transactions/${txn.id}`)}

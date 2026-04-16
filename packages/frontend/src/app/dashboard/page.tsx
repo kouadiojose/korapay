@@ -48,6 +48,10 @@ export default function DashboardPage() {
 
             {isLoading ? (
               <div className="h-[200px] bg-gray-100 rounded animate-pulse" />
+            ) : paymentMethods.length === 0 ? (
+              <div className="h-[200px] flex items-center justify-center text-gray-500 text-sm">
+                Aucune donnée disponible
+              </div>
             ) : (
               <>
                 <div className="h-[200px]">
