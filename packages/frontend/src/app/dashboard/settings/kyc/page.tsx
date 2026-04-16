@@ -47,7 +47,6 @@ export default function KycPage() {
       }
     } catch (err) {
       console.error('Failed to fetch KYC documents:', err);
-      toast.error('Erreur lors du chargement des documents KYC');
       setDocuments([]);
     } finally {
       setIsLoading(false);

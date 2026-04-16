@@ -52,7 +52,6 @@ export default function CheckoutPage() {
       } catch (err) {
         console.error('Failed to fetch checkout session:', err);
         setLoadError('Session de paiement introuvable');
-        toast.error('Erreur lors du chargement de la session de paiement');
       }
     };
 

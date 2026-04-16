@@ -34,7 +34,6 @@ export default function PayoutsPage() {
       setPayouts(data);
     } catch (err) {
       console.error('Failed to fetch payouts:', err);
-      toast.error('Erreur lors du chargement des décaissements');
       setPayouts([]);
     } finally {
       setIsLoading(false);

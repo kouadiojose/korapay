@@ -33,7 +33,6 @@ export function useTransactions(filters?: TransactionFilters) {
       setTotal(pagination?.total ?? txns.length);
     } catch (err) {
       console.error('Failed to fetch transactions:', err);
-      toast.error('Erreur lors du chargement des transactions');
       setTransactions([]);
       setTotal(0);
     } finally {

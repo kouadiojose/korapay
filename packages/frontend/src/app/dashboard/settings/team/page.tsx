@@ -46,7 +46,6 @@ export default function TeamPage() {
       setTeam(data);
     } catch (err) {
       console.error('Failed to fetch team members:', err);
-      toast.error('Erreur lors du chargement de l\'équipe');
       setTeam([]);
     } finally {
       setIsLoading(false);

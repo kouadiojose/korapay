@@ -22,7 +22,6 @@ export default function SettlementsPage() {
       setSettlements(data);
     } catch (err) {
       console.error('Failed to fetch settlements:', err);
-      toast.error('Erreur lors du chargement des règlements');
       setSettlements([]);
     } finally {
       setIsLoading(false);

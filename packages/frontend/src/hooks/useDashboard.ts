@@ -46,7 +46,6 @@ export function useDashboard() {
         setPaymentMethods([]);
       } catch (err) {
         console.error('Failed to fetch dashboard data:', err);
-        toast.error('Erreur lors du chargement du tableau de bord');
         setStats({
           total_volume: 0,
           total_transactions: 0,

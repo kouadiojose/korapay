@@ -29,7 +29,6 @@ export default function WalletsPage() {
         }
       } catch (err) {
         console.error('Failed to fetch wallets:', err);
-        toast.error('Erreur lors du chargement des portefeuilles');
         setWallets([]);
       } finally {
         setIsLoading(false);
@@ -51,7 +50,6 @@ export default function WalletsPage() {
       setWalletTransactions(txns);
     } catch (err) {
       console.error('Failed to fetch wallet transactions:', err);
-      toast.error('Erreur lors du chargement des mouvements');
       setWalletTransactions([]);
     } finally {
       setIsLoadingTransactions(false);

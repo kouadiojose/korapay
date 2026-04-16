@@ -31,7 +31,6 @@ export default function ApiKeysPage() {
       setApiKeys(data);
     } catch (err) {
       console.error('Failed to fetch API keys:', err);
-      toast.error('Erreur lors du chargement des clés API');
       setApiKeys([]);
     } finally {
       setIsLoading(false);

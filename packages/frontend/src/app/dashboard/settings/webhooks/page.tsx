@@ -29,7 +29,6 @@ export default function WebhooksPage() {
       setWebhooks(data);
     } catch (err) {
       console.error('Failed to fetch webhooks:', err);
-      toast.error('Erreur lors du chargement des webhooks');
       setWebhooks([]);
     } finally {
       setIsLoading(false);
