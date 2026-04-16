@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import api from '@/lib/api';
+import toast from 'react-hot-toast';
 import type {
   DashboardStats,
   ChartDataPoint,
@@ -117,81 +119,6 @@ const MOCK_RECENT_TRANSACTIONS: Transaction[] = [
     created_at: '2026-04-12T14:30:00Z',
     updated_at: '2026-04-12T14:31:00Z',
   },
-  {
-    id: 'txn_006',
-    reference: 'KP-TXN-2026-006',
-    type: 'collection',
-    amount: 35000,
-    currency: 'XOF',
-    fee: 525,
-    net_amount: 34475,
-    payment_method: 'moov_money',
-    status: 'success',
-    provider: 'moov_ci',
-    customer_name: 'Jean Kouassi',
-    created_at: '2026-04-12T11:20:00Z',
-    updated_at: '2026-04-12T11:21:00Z',
-  },
-  {
-    id: 'txn_007',
-    reference: 'KP-TXN-2026-007',
-    type: 'collection',
-    amount: 120000,
-    currency: 'XOF',
-    fee: 1800,
-    net_amount: 118200,
-    payment_method: 'orange_money',
-    status: 'success',
-    provider: 'orange_ci',
-    customer_name: 'Marie Coulibaly',
-    created_at: '2026-04-11T15:45:00Z',
-    updated_at: '2026-04-11T15:46:00Z',
-  },
-  {
-    id: 'txn_008',
-    reference: 'KP-TXN-2026-008',
-    type: 'payout',
-    amount: 200000,
-    currency: 'XOF',
-    fee: 3000,
-    net_amount: 197000,
-    payment_method: 'mtn_momo',
-    status: 'processing',
-    provider: 'mtn_ci',
-    customer_name: 'Paul Yao',
-    created_at: '2026-04-11T10:00:00Z',
-    updated_at: '2026-04-11T10:00:00Z',
-  },
-  {
-    id: 'txn_009',
-    reference: 'KP-TXN-2026-009',
-    type: 'collection',
-    amount: 8500,
-    currency: 'XOF',
-    fee: 128,
-    net_amount: 8372,
-    payment_method: 'wave',
-    status: 'success',
-    provider: 'wave_ci',
-    customer_name: 'Awa Sanogo',
-    created_at: '2026-04-10T09:30:00Z',
-    updated_at: '2026-04-10T09:31:00Z',
-  },
-  {
-    id: 'txn_010',
-    reference: 'KP-TXN-2026-010',
-    type: 'collection',
-    amount: 450000,
-    currency: 'XOF',
-    fee: 6750,
-    net_amount: 443250,
-    payment_method: 'bank_card',
-    status: 'success',
-    provider: 'stripe',
-    customer_name: 'Pierre Dubois',
-    created_at: '2026-04-10T08:00:00Z',
-    updated_at: '2026-04-10T08:02:00Z',
-  },
 ];
 
 export function useDashboard() {
@@ -202,16 +129,46 @@ export function useDashboard() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setStats(MOCK_STATS);
-      setChartData(MOCK_CHART_DATA);
-      setPaymentMethods(MOCK_PAYMENT_METHODS);
-      setRecentTransactions(MOCK_RECENT_TRANSACTIONS);
-      setIsLoading(false);
-    }, 600);
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      try {
+        const [statsRes, transactionsRes] = await Promise.all([
+          api.get('/transactions/stats'),
+          api.get('/transactions', { params: { per_page: 10 } }),
+        ]);
 
-    return () => clearTimeout(timer);
+        const statsData = statsRes.data.data;
+        setStats({
+          total_volume: statsData.total_volume ?? statsData.successful_volume ?? 0,
+          total_transactions: statsData.total_count ?? 0,
+          success_rate: statsData.success_rate ?? 0,
+          active_wallets: MOCK_STATS.active_wallets,
+          volume_trend: MOCK_STATS.volume_trend,
+          transaction_trend: MOCK_STATS.transaction_trend,
+          success_trend: MOCK_STATS.success_trend,
+          wallet_trend: MOCK_STATS.wallet_trend,
+        });
+
+        const txns = transactionsRes.data.data?.data ?? transactionsRes.data.data ?? [];
+        setRecentTransactions(txns);
+
+        // No chart/payment method endpoints yet -- use mock data as fallback
+        setChartData(MOCK_CHART_DATA);
+        setPaymentMethods(MOCK_PAYMENT_METHODS);
+      } catch (err) {
+        console.error('Failed to fetch dashboard data:', err);
+        toast.error('Erreur lors du chargement du tableau de bord');
+        // Graceful degradation: fall back to mock data
+        setStats(MOCK_STATS);
+        setChartData(MOCK_CHART_DATA);
+        setPaymentMethods(MOCK_PAYMENT_METHODS);
+        setRecentTransactions(MOCK_RECENT_TRANSACTIONS);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
   return {
