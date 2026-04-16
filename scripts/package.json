@@ -1,0 +1,16 @@
+{
+  "name": "korapay-migration-script",
+  "version": "1.0.0",
+  "description": "Standalone DB migration script for KoraPay",
+  "private": true,
+  "scripts": {
+    "migrate": "node migrate-all.js",
+    "migrate:seed": "node migrate-all.js --seed",
+    "rollback": "node migrate-all.js --rollback"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.3.1"
+  }
+}
